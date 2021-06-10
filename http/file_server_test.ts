@@ -9,7 +9,7 @@ import { TextProtoReader } from "../textproto/mod.ts";
 import { Response, ServerRequest } from "./server.ts";
 import { FileServerArgs, serveFile } from "./file_server.ts";
 import { dirname, fromFileUrl, join, resolve } from "../path/mod.ts";
-import { readAll, writeAll } from "../io/util.ts";
+import { iter, readAll, writeAll } from "../io/util.ts";
 
 let fileServer: Deno.Process<Deno.RunOptions & { stdout: "piped" }>;
 
@@ -104,7 +104,7 @@ async function fetchExactPath(
     let currentResult = "";
     let contentLength = -1;
     let startOfBody = -1;
-    for await (const chunk of Deno.iter(conn)) {
+    for await (const chunk of iter(conn)) {
       currentResult += decoder.decode(chunk);
       if (contentLength === -1) {
         const match = /^content-length: (.*)$/m.exec(currentResult);
@@ -202,6 +202,7 @@ Deno.test("serveDirectory", async function () {
     assert(res.headers.has("access-control-allow-headers"));
     const page = await res.text();
     assert(page.includes("README.md"));
+    assert(page.includes(`<a href="/testdata/">testdata/</a>`));
 
     // `Deno.FileInfo` is not completely compatible with Windows yet
     // TODO(bartlomieju): `mode` should work correctly in the future.

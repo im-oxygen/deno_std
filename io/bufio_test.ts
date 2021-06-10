@@ -220,7 +220,6 @@ async function testReadLine(input: Uint8Array) {
       }
       const { line, more } = r;
       assertEquals(more, false);
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       const want = testOutput.subarray(done, done + line.byteLength);
       assertEquals(
         line,
@@ -241,6 +240,52 @@ async function testReadLine(input: Uint8Array) {
 Deno.test("bufioReadLine", async function () {
   await testReadLine(testInput);
   await testReadLine(testInputrn);
+});
+
+Deno.test("[io] readStringDelim basic", async () => {
+  const delim = "!#$%&()=~";
+  const exp = [
+    "",
+    "a",
+    "bc",
+    "def",
+    "",
+    "!",
+    "!#",
+    "!#$%&()=",
+    "#$%&()=~",
+    "",
+    "",
+  ];
+  const str = exp.join(delim);
+  const arr: string[] = [];
+  for await (const v of readStringDelim(new StringReader(str), delim)) {
+    arr.push(v);
+  }
+  assertEquals(arr, exp);
+});
+
+Deno.test("[io] readStringDelim bigger delim than buf size", async () => {
+  // 0123456789...
+  const delim = Array.from({ length: 1025 }).map((_, i) => i % 10).join("");
+  const exp = ["", "a", "bc", "def", "01", "012345678", "123456789", "", ""];
+  const str = exp.join(delim);
+  const arr: string[] = [];
+  for await (const v of readStringDelim(new StringReader(str), delim)) {
+    arr.push(v);
+  }
+  assertEquals(arr, exp);
+});
+
+Deno.test("[io] readStringDelim delim=1213", async () => {
+  const delim = "1213";
+  const exp = ["", "a", "bc", "def", "01", "012345678", "123456789", "", ""];
+  const str = exp.join(delim);
+  const arr: string[] = [];
+  for await (const v of readStringDelim(new StringReader(str), "1213")) {
+    arr.push(v);
+  }
+  assertEquals(arr, exp);
 });
 
 Deno.test("bufioPeek", async function () {
@@ -331,7 +376,6 @@ Deno.test("bufioWriter", async function () {
   const data = new Uint8Array(8192);
 
   for (let i = 0; i < data.byteLength; i++) {
-    // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
     data[i] = " ".charCodeAt(0) + (i % ("~".charCodeAt(0) - " ".charCodeAt(0)));
   }
 
@@ -365,7 +409,6 @@ Deno.test("bufioWriterSync", function (): void {
   const data = new Uint8Array(8192);
 
   for (let i = 0; i < data.byteLength; i++) {
-    // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
     data[i] = " ".charCodeAt(0) + (i % ("~".charCodeAt(0) - " ".charCodeAt(0)));
   }
 
@@ -457,6 +500,34 @@ Deno.test("readStringDelimAndLines", async function () {
   }
   assertEquals(lines_.length, 10);
   assertEquals(lines_, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+});
+
+Deno.test("readLinesWithEncodingISO-8859-15", async function () {
+  const lines_ = [];
+  const file_ = await Deno.open("./io/testdata/iso-8859-15.txt");
+
+  for await (const l of readLines(file_, { encoding: "iso-8859-15" })) {
+    lines_.push(l);
+  }
+
+  Deno.close(file_.rid);
+
+  assertEquals(lines_.length, 13);
+  assertEquals(lines_, [
+    "\u0020!\"#$%&'()*+,-./",
+    "0123456789:;<=>?",
+    "@ABCDEFGHIJKLMNO",
+    "PQRSTUVWXYZ[\\]^_",
+    "`abcdefghijklmno",
+    "pqrstuvwxyz{|}~",
+    "\u00a0¡¢£€¥Š§š©ª«¬\u00ad®¯",
+    "°±²³Žµ¶·ž¹º»ŒœŸ¿",
+    "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏ",
+    "ÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞß",
+    "àáâãäåæçèéêëìíîï",
+    "ðñòóôõö÷øùúûüýþÿ",
+    "",
+  ]);
 });
 
 Deno.test(

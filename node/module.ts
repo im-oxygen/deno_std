@@ -24,7 +24,9 @@ import "./global.ts";
 import nodeAssert from "./assert.ts";
 import nodeBuffer from "./buffer.ts";
 import nodeCrypto from "./crypto.ts";
+import nodeConsole from "./console.ts";
 import nodeConstants from "./constants.ts";
+import nodeChildProcess from "./child_process.ts";
 import nodeEvents from "./events.ts";
 import nodeFS from "./fs.ts";
 import nodeOs from "./os.ts";
@@ -607,6 +609,10 @@ nativeModulePolyfill.set(
   "constants",
   createNativeModule("constants", nodeConstants),
 );
+nativeModulePolyfill.set(
+  "child_process",
+  createNativeModule("child_process", nodeChildProcess),
+);
 nativeModulePolyfill.set("crypto", createNativeModule("crypto", nodeCrypto));
 nativeModulePolyfill.set(
   "events",
@@ -632,6 +638,7 @@ nativeModulePolyfill.set("timers", createNativeModule("timers", nodeTimers));
 nativeModulePolyfill.set("tty", createNativeModule("tty", nodeTty));
 nativeModulePolyfill.set("url", createNativeModule("url", nodeUrl));
 nativeModulePolyfill.set("util", createNativeModule("util", nodeUtil));
+nativeModulePolyfill.set("console", createNativeModule("console", nodeConsole));
 
 function loadNativeModule(
   _filename: string,

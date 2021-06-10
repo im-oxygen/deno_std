@@ -13,6 +13,11 @@ Deno.test({
   name: "[util] inspect",
   fn() {
     assertEquals(stripColor(util.inspect({ foo: 123 })), "{ foo: 123 }");
+    assertEquals(stripColor(util.inspect("foo")), "'foo'");
+    assertEquals(
+      stripColor(util.inspect("Deno's logo is so cute.")),
+      `"Deno's logo is so cute."`,
+    );
   },
 });
 
@@ -296,4 +301,17 @@ Deno.test("[util] format", () => {
     util.format("%o %O %i", testData, testData, 10),
     `${expected} ${expected} 10`,
   );
+});
+
+Deno.test("[util] inherits", () => {
+  class Ctor {
+  }
+
+  class SuperCtor {
+    superMethod() {}
+  }
+
+  util.inherits(Ctor, SuperCtor);
+
+  assert(Object.getPrototypeOf(Ctor).hasOwnProperty("superMethod"));
 });

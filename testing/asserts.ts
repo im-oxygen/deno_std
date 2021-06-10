@@ -122,6 +122,14 @@ export function equal(c: unknown, d: unknown): boolean {
       return true;
     }
     if (a && typeof a === "object" && b && typeof b === "object") {
+      if (a instanceof WeakMap || b instanceof WeakMap) {
+        if (!(a instanceof WeakMap && b instanceof WeakMap)) return false;
+        throw new TypeError("cannot compare WeakMap instances");
+      }
+      if (a instanceof WeakSet || b instanceof WeakSet) {
+        if (!(a instanceof WeakSet && b instanceof WeakSet)) return false;
+        throw new TypeError("cannot compare WeakSet instances");
+      }
       if (seen.get(a) === b) {
         return true;
       }
@@ -161,8 +169,15 @@ export function equal(c: unknown, d: unknown): boolean {
         if (!compare(a && a[key as Key], b && b[key as Key])) {
           return false;
         }
+        if (((key in a) && (!(key in b))) || ((key in b) && (!(key in a)))) {
+          return false;
+        }
       }
       seen.set(a, b);
+      if (a instanceof WeakRef || b instanceof WeakRef) {
+        if (!(a instanceof WeakRef && b instanceof WeakRef)) return false;
+        return compare(a.deref(), b.deref());
+      }
       return true;
     }
     return false;
@@ -495,9 +510,24 @@ export function assertObjectMatch(
       ]
         .filter((key) => key in b)
         .map((key) => [key, a[key as string]]) as Array<[string, unknown]>;
-      // Build filtered object and filter recursively on nested objects references
       for (const [key, value] of entries) {
-        if (typeof value === "object") {
+        // On array references, build a filtered array and filter nested objects inside
+        if (Array.isArray(value)) {
+          const subset = (b as loose)[key];
+          if (Array.isArray(subset)) {
+            filtered[key] = value
+              .slice(0, subset.length)
+              .map((element, index) => {
+                const subsetElement = subset[index];
+                if ((typeof subsetElement === "object") && (subsetElement)) {
+                  return filter(element, subsetElement);
+                }
+                return element;
+              });
+            continue;
+          }
+        } // On nested objects references, build a filtered object recursively
+        else if (typeof value === "object") {
           const subset = (b as loose)[key];
           if ((typeof subset === "object") && (subset)) {
             filtered[key] = filter(value as loose, subset as loose);
@@ -516,7 +546,6 @@ export function assertObjectMatch(
  * Forcefully throws a failed assertion
  */
 export function fail(msg?: string): void {
-  // eslint-disable-next-line @typescript-eslint/no-use-before-define
   assert(false, `Failed assertion${msg ? `: ${msg}` : "."}`);
 }
 
